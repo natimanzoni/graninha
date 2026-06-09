@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graninha Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a22;
+      --surface2: #22222e;
+      --border: #2e2e3e;
+      --text: #f0ede8;
+      --text-muted: #7a7a96;
+      --receita: #4ade80;
+      --despesa: #f87171;
+      --accent: #a78bfa;
+      --font-display: 'DM Serif Display', serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      padding: 0 0 40px;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 24px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    .logo span { color: var(--accent); }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--receita);
+      box-shadow: 0 0 8px var(--receita);
+    }
+
+    /* NAVEGAÇÃO DE MÊS */
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .month-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .month-btn:hover { background: var(--accent); border-color: var(--accent); }
+
+    .month-label {
+      font-family: var(--font-display);
+      font-size: 20px;
+      min-width: 160px;
+      text-align: center;
+      letter-spacing: -0.3px;
+    }
+
+    /* LOADING */
+    .loading {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .spinner {
+      width: 32px; height: 32px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* MAIN CONTENT */
+    main { padding: 24px 16px; max-width: 480px; margin: 0 auto; }
+
+    /* KPI CARDS */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 16px;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .kpi-card.saldo {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .kpi-card.receita::before { background: var(--receita); }
+    .kpi-card.despesa::before { background: var(--despesa); }
+    .kpi-card.saldo::before { background: var(--accent); }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-family: var(--font-display);
+      font-size: 26px;
+      letter-spacing: -0.5px;
+    }
+
+    .kpi-card.receita .kpi-value { color: var(--receita); }
+    .kpi-card.despesa .kpi-value { color: var(--despesa); }
+    .kpi-card.saldo .kpi-value { color: var(--accent); font-size: 30px; }
+
+    .kpi-icon { font-size: 28px; opacity: 0.4; }
+
+    /* SEÇÃO */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* TABELA DE CATEGORIAS */
+    .cat-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .cat-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .cat-bar-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    .cat-name {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cat-amount {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--despesa);
+    }
+
+    .cat-bar-bg {
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .cat-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--despesa);
+      transition: width 0.6s ease;
+    }
+
+    .cat-pct {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* GRÁFICO */
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* EMPTY STATE */
+    .empty {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* ANIMAÇÕES */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.10s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+    .section:nth-child(1) { animation-delay: 0.20s; }
+    .section:nth-child(2) { animation-delay: 0.25s; }
+    .section:nth-child(3) { animation-delay: 0.30s; }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="logo">grani<span>nha</span></div>
+    <div class="status-dot" id="statusDot" style="background:#555"></div>
+  </div>
+  <div class="month-nav">
+    <button class="month-btn" onclick="changeMonth(-1)">‹</button>
+    <div class="month-label" id="monthLabel">carregando...</div>
+    <button class="month-btn" onclick="changeMonth(1)">›</button>
+  </div>
+</header>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  Carregando dados...
+</div>
+
+<main id="main" style="display:none"></main>
+
+<script>
+// ============================================================
+// CONFIGURAÇÃO — cole a URL do seu Web App aqui
+// ============================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbzgtD_V4KLdiuTmFMecvk8nOge0NTtJ3MaPsU08t9U0Mzid2Q5xD6saTjeTFHws-6je6w/exec';
+
+// ============================================================
+// ESTADO
+// ============================================================
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+let currentDate = new Date();
+let currentMonth = currentDate.getMonth();
+let currentYear = currentDate.getFullYear();
+let allData = null;
+let chartInstance = null;
+
+// ============================================================
+// NAVEGAÇÃO
+// ============================================================
+function changeMonth(delta) {
+  currentMonth += delta;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+  renderDashboard();
+}
+
+function updateMonthLabel() {
+  document.getElementById('monthLabel').textContent =
+    `${MESES[currentMonth]} ${currentYear}`;
+}
+
+// ============================================================
+// FORMATAÇÃO
+// ============================================================
+function formatBRL(value) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency', currency: 'BRL'
+  }).format(value || 0);
+}
+
+function parseDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  const d = new Date(val);
+  return isNaN(d) ? null : d;
+}
+
+// ============================================================
+// FETCH
+// ============================================================
+async function fetchData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('statusDot').style.background = '#555';
+
+  try {
+    const res = await fetch(API_URL);
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    allData = json.data;
+    document.getElementById('statusDot').style.background = 'var(--receita)';
+    document.getElementById('statusDot').style.boxShadow = '0 0 8px var(--receita)';
+  } catch (err) {
+    document.getElementById('loading').innerHTML =
+      `<div style="color:var(--despesa)">Erro ao carregar dados.<br><small>${err.message}</small></div>`;
+    return;
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
+  renderDashboard();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderDashboard() {
+  updateMonthLabel();
+
+  const { transacoes, categorias_menos, categorias_mais } = allData;
+
+  // Mapas de ID → nome
+  const mapMenos = {};
+  categorias_menos.forEach(c => mapMenos[c.id] = c.nome);
+  const mapMais = {};
+  categorias_mais.forEach(c => mapMais[c.id] = c.nome);
+
+  // Filtrar por mês/ano atual
+  const doMes = transacoes.filter(t => {
+    const d = parseDate(t.data);
+    return d && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+
+  const despesas = doMes.filter(t => t.tipo === 'Menos graninha (-)');
+  const receitas = doMes.filter(t => t.tipo === 'Mais graninha (+)');
+
+  const totalDespesas = despesas.reduce((s, t) => s + (parseFloat(t.valor) || 0), 0);
+  const totalReceitas = receitas.reduce((s, t) => s + (parseFloat(t.valor) || 0), 0);
+  const saldo = totalReceitas - totalDespesas;
+
+  // Agrupar despesas por categoria
+  const porCategoria = {};
+  despesas.forEach(t => {
+    const nome = mapMenos[t.categoria_menos] || 'Sem categoria';
+    porCategoria[nome] = (porCategoria[nome] || 0) + (parseFloat(t.valor) || 0);
+  });
+
+  const catSorted = Object.entries(porCategoria)
+    .sort((a, b) => b[1] - a[1]);
+
+  // Agrupar receitas por categoria
+  const porCategoriaReceita = {};
+  receitas.forEach(t => {
+    const nome = mapMais[t.categoria_mais] || 'Sem categoria';
+    porCategoriaReceita[nome] = (porCategoriaReceita[nome] || 0) + (parseFloat(t.valor) || 0);
+  });
+
+  const catReceitaSorted = Object.entries(porCategoriaReceita)
+    .sort((a, b) => b[1] - a[1]);
+
+  // Evolução mensal (últimos 6 meses)
+  const evolucao = getEvolucao(transacoes, 6);
+
+  // Renderizar HTML
+  document.getElementById('main').innerHTML = `
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card receita">
+        <div class="kpi-label">Receitas</div>
+        <div class="kpi-value">${formatBRL(totalReceitas)}</div>
+      </div>
+      <div class="kpi-card despesa">
+        <div class="kpi-label">Despesas</div>
+        <div class="kpi-value">${formatBRL(totalDespesas)}</div>
+      </div>
+      <div class="kpi-card saldo">
+        <div>
+          <div class="kpi-label">Saldo do mês</div>
+          <div class="kpi-value" style="color:${saldo >= 0 ? 'var(--receita)' : 'var(--despesa)'}">
+            ${formatBRL(saldo)}
+          </div>
+        </div>
+        <div class="kpi-icon">${saldo >= 0 ? '📈' : '📉'}</div>
+      </div>
+    </div>
+
+    <!-- Gastos por Categoria -->
+    <div class="section">
+      <div class="section-title">Gastos por categoria</div>
+      ${catSorted.length === 0
+        ? '<div class="empty">Nenhuma despesa este mês</div>'
+        : `<div class="cat-list">${catSorted.map(([nome, val]) => `
+          <div class="cat-item">
+            <div class="cat-bar-wrap">
+              <div class="cat-name">
+                <span>${nome}</span>
+                <span class="cat-amount">${formatBRL(val)}</span>
+              </div>
+              <div class="cat-bar-bg">
+                <div class="cat-bar-fill" style="width:${(val/totalDespesas*100).toFixed(1)}%"></div>
+              </div>
+              <div class="cat-pct">${(val/totalDespesas*100).toFixed(1)}%</div>
+            </div>
+          </div>`).join('')}
+        </div>`
+      }
+    </div>
+
+    <!-- Receitas por Categoria -->
+    <div class="section">
+      <div class="section-title">Receitas por categoria</div>
+      ${catReceitaSorted.length === 0
+        ? '<div class="empty">Nenhuma receita este mês</div>'
+        : `<div class="cat-list">${catReceitaSorted.map(([nome, val]) => `
+          <div class="cat-item">
+            <div class="cat-bar-wrap">
+              <div class="cat-name">
+                <span>${nome}</span>
+                <span class="cat-amount" style="color:var(--receita)">${formatBRL(val)}</span>
+              </div>
+              <div class="cat-bar-bg">
+                <div class="cat-bar-fill" style="width:${(val/totalReceitas*100).toFixed(1)}%;background:var(--receita)"></div>
+              </div>
+              <div class="cat-pct">${(val/totalReceitas*100).toFixed(1)}%</div>
+            </div>
+          </div>`).join('')}
+        </div>`
+      }
+    </div>
+
+    <!-- Evolução mensal -->
+    <div class="section">
+      <div class="section-title">Evolução — últimos 6 meses</div>
+      <div class="chart-wrap">
+        <canvas id="evolChart"></canvas>
+      </div>
+    </div>
+
+    <footer>Atualizado agora • Graninha 💜</footer>
+  `;
+
+  // Renderizar gráfico
+  renderChart(evolucao);
+}
+
+// ============================================================
+// EVOLUÇÃO MENSAL
+// ============================================================
+function getEvolucao(transacoes, meses) {
+  const result = [];
+  for (let i = meses - 1; i >= 0; i--) {
+    const d = new Date(currentYear, currentMonth - i, 1);
+    const m = d.getMonth();
+    const y = d.getFullYear();
+    const label = `${MESES[m].slice(0,3)}/${String(y).slice(2)}`;
+
+    const filtrado = transacoes.filter(t => {
+      const td = parseDate(t.data);
+      return td && td.getMonth() === m && td.getFullYear() === y;
+    });
+
+    const despesa = filtrado
+      .filter(t => t.tipo === 'Menos graninha (-)')
+      .reduce((s, t) => s + (parseFloat(t.valor) || 0), 0);
+    const receita = filtrado
+      .filter(t => t.tipo === 'Mais graninha (+)')
+      .reduce((s, t) => s + (parseFloat(t.valor) || 0), 0);
+
+    result.push({ label, despesa, receita });
+  }
+  return result;
+}
+
+function renderChart(evolucao) {
+  if (chartInstance) chartInstance.destroy();
+  const ctx = document.getElementById('evolChart').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: evolucao.map(e => e.label),
+      datasets: [
+        {
+          label: 'Receitas',
+          data: evolucao.map(e => e.receita),
+          backgroundColor: 'rgba(74,222,128,0.7)',
+          borderRadius: 6,
+        },
+        {
+          label: 'Despesas',
+          data: evolucao.map(e => e.despesa),
+          backgroundColor: 'rgba(248,113,113,0.7)',
+          borderRadius: 6,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#7a7a96', font: { size: 11 }, boxWidth: 12 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => formatBRL(ctx.raw)
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#7a7a96', font: { size: 10 } }, grid: { display: false } },
+        y: {
+          ticks: {
+            color: '#7a7a96', font: { size: 10 },
+            callback: v => 'R$' + v.toLocaleString('pt-BR')
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' }
+        }
+      }
+    }
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+fetchData();
+</script>
+</body>
+</html>
